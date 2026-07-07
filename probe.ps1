@@ -1,4 +1,4 @@
-# Royal Kennel API probe (round 4 - just the Camera class)
+# Royal Kennel API probe (round 5 - mouse input, for user camera control)
 # Run from the mod5 folder:  powershell -ExecutionPolicy Bypass -File probe.ps1 > probe.txt
 $ErrorActionPreference = "SilentlyContinue"
 
@@ -10,6 +10,16 @@ $mc = Get-ChildItem -Recurse -Path @("$env:USERPROFILE\.gradle\caches\fabric-loo
                      $_.FullName -match "loom\.mappings" -and $_.Name -notmatch "sources|intermediary" } |
       Sort-Object Length -Descending | Select-Object -First 1
 "### MC JAR: $($mc.FullName)"
+
+function DumpFull($cls) {
+    ""
+    "### javap $cls"
+    & $javap -classpath $mc.FullName $cls 2>&1
+}
+
+DumpFull "net.minecraft.client.gui.components.events.GuiEventListener"
+DumpFull "net.minecraft.client.input.MouseButtonEvent"
 ""
-"### javap -p net.minecraft.client.Camera"
-& $javap -p -classpath $mc.FullName "net.minecraft.client.Camera" 2>&1
+"### javap net.minecraft.client.gui.screens.Screen (filtered: mouse|Mouse|scroll|Scroll|drag|Drag)"
+& $javap -classpath $mc.FullName "net.minecraft.client.gui.screens.Screen" 2>&1 |
+    Select-String -Pattern "mouse|Mouse|scroll|Scroll|drag|Drag" | ForEach-Object { $_.Line }

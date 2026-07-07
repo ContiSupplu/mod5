@@ -37,6 +37,19 @@ public final class AccessoryRenderer {
     private static final Identifier ATLAS = RoyalKennel.id("textures/entity/accessories.png");
     private static final double MAX_RENDER_DISTANCE_SQ = 64.0 * 64.0;
 
+    // ---- Hand-tuned anchors (blocks, in the wolf's local frame) -----------
+    // "Sitting" wolves in 1.21.11 sprawl flat on the ground, so those anchors
+    // are much lower and further forward than the standing ones.
+    private static final float HAT_UP_STANDING = 0.66f;
+    private static final float HAT_FWD_STANDING = 0.30f;
+    private static final float HAT_UP_SITTING = 0.24f;
+    private static final float HAT_FWD_SITTING = 0.40f;
+    private static final float HAT_LIFT = 0.12f;        // hat base above the skull pivot
+    private static final float BACK_UP_STANDING = 0.46f;
+    private static final float BACK_FWD_STANDING = -0.04f;
+    private static final float BACK_UP_SITTING = 0.17f;
+    private static final float BACK_FWD_SITTING = 0.02f;
+
     // 16x16 cells inside the 64x64 atlas.
     private static final int GOLD = cell(0, 0);
     private static final int IRON = cell(1, 0);
@@ -100,16 +113,19 @@ public final class AccessoryRenderer {
         float headPitch = Mth.lerp(partial, wolf.xRotO, wolf.getXRot());
         boolean sitting = wolf.isInSittingPose();
         float scale = wolf.isBaby() ? 0.55f : 1.0f;
-        double eyeHeight = wolf.getEyeY() - wolf.getY();
 
         if (style.hat() != 0) {
             ps.pushPose();
-            ps.translate(x, y + eyeHeight, z);
+            ps.translate(x, y, z);
             ps.mulPose(Axis.YP.rotationDegrees(-headYaw));
-            ps.mulPose(Axis.XP.rotationDegrees(headPitch));
             ps.scale(scale, scale, scale);
-            // Hat base plane just above the skull; sitting dogs carry the head lower.
-            ps.translate(0.0f, sitting ? 0.05f : 0.11f, 0.02f);
+            // Move to the head pivot (the head sits well forward of body center),
+            // tilt with the head, then lift the hat base onto the skull.
+            ps.translate(0.0f,
+                    sitting ? HAT_UP_SITTING : HAT_UP_STANDING,
+                    sitting ? HAT_FWD_SITTING : HAT_FWD_STANDING);
+            ps.mulPose(Axis.XP.rotationDegrees(headPitch));
+            ps.translate(0.0f, HAT_LIFT, 0.0f);
             switch (style.hat()) {
                 case 1 -> crown(ps, vc);
                 case 2 -> mageCap(ps, vc);
@@ -125,12 +141,11 @@ public final class AccessoryRenderer {
             ps.translate(x, y, z);
             ps.mulPose(Axis.YP.rotationDegrees(-bodyYaw));
             ps.scale(scale, scale, scale);
-            if (sitting) {
-                ps.translate(0.0f, 0.37f, -0.06f);
-                ps.mulPose(Axis.XP.rotationDegrees(-33.0f)); // chest rises when sitting
-            } else {
-                ps.translate(0.0f, 0.51f, -0.02f);
-            }
+            // The back stays level both standing and sprawled, just at
+            // different heights.
+            ps.translate(0.0f,
+                    sitting ? BACK_UP_SITTING : BACK_UP_STANDING,
+                    sitting ? BACK_FWD_SITTING : BACK_FWD_STANDING);
             switch (style.back()) {
                 case 1 -> backpack(ps, vc);
                 case 2 -> keg(ps, vc);
