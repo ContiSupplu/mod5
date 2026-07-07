@@ -46,6 +46,15 @@ To test straight from the repo without installing anything:
 > Grab the current numbers for 1.21.11 from <https://fabricmc.net/develop> and paste them in —
 > that page shows the exact three lines used here.
 
+## Camera controls (while the atelier is open)
+
+- The camera **orbits the dog slowly on its own** — one lap is roughly a 40s short.
+- **Left-drag** anywhere on the world (not the panel) to steer it yourself: drag
+  sideways to circle the dog, up/down to raise or lower the shot. Taking the reins
+  pauses the auto-orbit.
+- **Scroll wheel** zooms in and out.
+- The **"✦ Camera" chip** (top right) toggles between *Orbiting* and *Held*.
+
 ## Filming tips (for the 40-second short)
 
 - Groom in an open, pretty spot — the orbiting camera doesn't dodge walls (by design, it's tiny).

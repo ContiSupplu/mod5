@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.function.Supplier;
 
 import com.contisupply.royalkennel.DogStyle;
 import com.contisupply.royalkennel.KennelAttachments;
@@ -16,6 +17,7 @@ import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.input.InputWithModifiers;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
@@ -137,6 +139,11 @@ public class GroomingScreen extends Screen {
             sendCloseOnce(true);
             onClose();
         }));
+
+        // Camera mode chip, top-right: pause/resume the slow orbit.
+        addRenderableWidget(new MedievalButton(this.width - 132, 6, 126, 16,
+                () -> ClientGroomingSession.isOrbitPaused() ? "✦ Camera: Held" : "✦ Camera: Orbiting",
+                ClientGroomingSession::toggleOrbit));
     }
 
     private int panelY() {
@@ -219,6 +226,34 @@ public class GroomingScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        if (super.mouseDragged(event, dragX, dragY)) {
+            return true;
+        }
+        // Left-drag on the world (not the panel) steers the camera.
+        if (event.button() == 0 && !overPanel(event.x(), event.y())) {
+            ClientGroomingSession.nudgeOrbit(dragX, dragY);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)) {
+            return true;
+        }
+        ClientGroomingSession.nudgeZoom(scrollY);
+        return true;
+    }
+
+    private boolean overPanel(double mx, double my) {
+        int py = panelY();
+        return mx >= PANEL_X - 4 && mx <= PANEL_X + PANEL_W + 4
+                && my >= py - 4 && my <= py + PANEL_H + 4;
     }
 
     @Override
@@ -382,9 +417,15 @@ public class GroomingScreen extends Screen {
 
     private class MedievalButton extends AbstractButton {
         private final Runnable action;
+        private final Supplier<String> label;
 
         MedievalButton(int x, int y, int w, int h, String label, Runnable action) {
-            super(x, y, w, h, Component.literal(label));
+            this(x, y, w, h, () -> label, action);
+        }
+
+        MedievalButton(int x, int y, int w, int h, Supplier<String> label, Runnable action) {
+            super(x, y, w, h, Component.literal(label.get()));
+            this.label = label;
             this.action = action;
         }
 
@@ -398,7 +439,7 @@ public class GroomingScreen extends Screen {
             int x = getX(), y = getY(), w = getWidth(), h = getHeight();
             g.fill(x, y, x + w, y + h, isHoveredOrFocused() ? GOLD : TIMBER_DARK);
             g.fillGradient(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF6B4A2B, 0xFF4A3018);
-            centerText(g, getMessage().getString(), x + w / 2, y + (h - 8) / 2,
+            centerText(g, label.get(), x + w / 2, y + (h - 8) / 2,
                     isHoveredOrFocused() ? 0xFFFFEFC2 : GOLD_BRIGHT, true);
         }
 

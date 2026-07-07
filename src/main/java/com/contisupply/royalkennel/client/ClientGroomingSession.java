@@ -42,6 +42,14 @@ public final class ClientGroomingSession {
     private static float baseAngleDeg;
     private static CameraType previousCameraType;
 
+    // User camera control (drag to orbit, scroll to zoom, toggle to pause the waltz).
+    private static float userYawOffset;
+    private static double orbitAngleDeg;
+    private static boolean orbitPaused;
+    private static double distance;
+    private static double height;
+    private static long lastFrameNanos;
+
     private static boolean glideCaptured;
     private static Vec3 glideFromPos = Vec3.ZERO;
     private static float glideFromYaw;
@@ -58,6 +66,12 @@ public final class ClientGroomingSession {
         // Start the orbit in front of the dog's face.
         baseAngleDeg = target.yBodyRot;
         glideCaptured = false;
+        userYawOffset = 0.0f;
+        orbitAngleDeg = 0.0;
+        orbitPaused = false;
+        distance = ORBIT_DISTANCE;
+        height = ORBIT_HEIGHT;
+        lastFrameNanos = System.nanoTime();
         previousCameraType = minecraft.options.getCameraType();
         // Third person = no first-person hand in frame while we steer the camera.
         minecraft.options.setCameraType(CameraType.THIRD_PERSON_BACK);
@@ -80,6 +94,32 @@ public final class ClientGroomingSession {
 
     public static Wolf wolf() {
         return wolf;
+    }
+
+    /** Drag on the world: rotate around the dog and raise/lower the camera. */
+    public static void nudgeOrbit(double dragX, double dragY) {
+        if (!active) {
+            return;
+        }
+        orbitPaused = true; // taking the reins stops the waltz
+        userYawOffset += (float) (dragX * 0.5);
+        height = Mth.clamp(height - dragY * 0.02, 0.15, 2.75);
+    }
+
+    /** Scroll wheel: zoom in/out. */
+    public static void nudgeZoom(double scrollY) {
+        if (!active) {
+            return;
+        }
+        distance = Mth.clamp(distance - scrollY * 0.4, 1.3, 6.5);
+    }
+
+    public static boolean isOrbitPaused() {
+        return orbitPaused;
+    }
+
+    public static void toggleOrbit() {
+        orbitPaused = !orbitPaused;
     }
 
     /**
@@ -106,13 +146,21 @@ public final class ClientGroomingSession {
         double dogZ = Mth.lerp(partial, wolf.zo, wolf.getZ());
 
         double t = KennelClock.secondsSince(startNanos);
-        double angleRad = Math.toRadians(baseAngleDeg + t * ORBIT_SPEED_DEG);
+
+        // Advance the slow waltz frame-by-frame so pausing/resuming is seamless.
+        long now = System.nanoTime();
+        double dt = Math.min((now - lastFrameNanos) / 1_000_000_000.0, 0.1);
+        lastFrameNanos = now;
+        if (!orbitPaused) {
+            orbitAngleDeg += ORBIT_SPEED_DEG * dt;
+        }
+        double angleRad = Math.toRadians(baseAngleDeg + orbitAngleDeg + userYawOffset);
 
         // Orbit point around the dog. (-sin, cos) is Minecraft's yaw->forward mapping,
         // so angle == body yaw puts the camera directly in front of the dog's face.
-        double camX = dogX - Math.sin(angleRad) * ORBIT_DISTANCE;
-        double camY = dogY + ORBIT_HEIGHT;
-        double camZ = dogZ + Math.cos(angleRad) * ORBIT_DISTANCE;
+        double camX = dogX - Math.sin(angleRad) * distance;
+        double camY = dogY + height;
+        double camZ = dogZ + Math.cos(angleRad) * distance;
 
         // Aim at the dog.
         double lookX = dogX - camX;
