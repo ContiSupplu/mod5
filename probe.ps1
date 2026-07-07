@@ -19,7 +19,9 @@ $cand = Get-ChildItem -Recurse -Path $roots -Filter "*.jar" |
 $cand | Sort-Object Length -Descending | Select-Object -First 15 |
     ForEach-Object { "$([math]::Round($_.Length/1MB,1)) MB  $($_.FullName)" }
 
-$mc = $cand | Where-Object { $_.Name -match "minecraft|merged|named" } |
+# The named (Mojang-mapped) jar lives under minecraftMaven with "loom.mappings"
+# in its path; the big plain minecraft-server.jar is still obfuscated.
+$mc = $cand | Where-Object { $_.Name -match "minecraft-merged" -and $_.FullName -match "loom\.mappings" } |
       Sort-Object Length -Descending | Select-Object -First 1
 ""
 "### MC JAR: $($mc.FullName) [$([math]::Round($mc.Length/1MB,1)) MB]"
@@ -61,6 +63,8 @@ DumpGrep $mc.FullName "net.minecraft.world.level.Level" "lient"
 $rtClass = ($list | Select-String -Pattern "RenderTypes\.class$" | Select-Object -First 1).Line -replace "/", "." -replace "\.class$", ""
 if ($rtClass) { DumpGrep $mc.FullName $rtClass "ntity" }
 
+DumpGrep $mc.FullName "net.minecraft.client.renderer.GameRenderer" "amera"
+
 # Fabric's reworked world render events: exact context/event signatures.
 $fj = Get-ChildItem -Recurse -Path $roots -Filter "*.jar" |
       Where-Object { $_.Name -match "fabric-rendering-v1" -and $_.Name -notmatch "sources" } |
@@ -71,3 +75,4 @@ DumpFull $fj.FullName "net.fabricmc.fabric.api.client.rendering.v1.world.WorldRe
 DumpFull $fj.FullName 'net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents$AfterEntities'
 DumpFull $fj.FullName "net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext"
 DumpFull $fj.FullName "net.fabricmc.fabric.api.client.rendering.v1.world.AbstractWorldRenderContext"
+DumpFull $fj.FullName "net.fabricmc.fabric.api.client.rendering.v1.world.WorldTerrainRenderContext"
