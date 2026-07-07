@@ -20,13 +20,13 @@ import net.minecraft.world.phys.Vec3;
 public abstract class CameraMixin {
 
     @Shadow
-    public abstract Vec3 getPosition();
+    public abstract Vec3 position();
 
     @Shadow
-    public abstract float getYRot();
+    public abstract float yRot();
 
     @Shadow
-    public abstract float getXRot();
+    public abstract float xRot();
 
     @Shadow
     protected abstract void setPosition(double x, double y, double z);
@@ -37,7 +37,7 @@ public abstract class CameraMixin {
     @Inject(method = "setup", at = @At("TAIL"))
     private void royalkennel$focusOnHound(CallbackInfo ci) {
         ClientGroomingSession.CameraPose pose =
-                ClientGroomingSession.solve(this.getPosition(), this.getYRot(), this.getXRot());
+                ClientGroomingSession.solve(this.position(), this.yRot(), this.xRot());
         if (pose != null) {
             this.setRotation(pose.yaw(), pose.pitch());
             this.setPosition(pose.x(), pose.y(), pose.z());

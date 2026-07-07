@@ -71,7 +71,7 @@ public final class AccessoryRenderer {
             poseStack = new PoseStack();
         }
 
-        Vec3 cameraPos = context.gameRenderer().getMainCamera().getPosition();
+        Vec3 cameraPos = context.gameRenderer().getMainCamera().position();
         float partial = KennelClock.partialTick();
         VertexConsumer buffer = consumers.getBuffer(RenderTypes.entityCutoutNoCull(ATLAS));
 
