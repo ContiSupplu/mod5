@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "royalkennel",
+  "version": "${version}",
+  "name": "The Royal Kennel",
+  "description": "A medieval atelier for thy noble hound. Sneak + right-click your tamed dog to summon the Royal Kennel: the camera glides to your pet while you choose its bloodline, headwear, back gear, collar hue and title.",
+  "authors": [
+    "ContiSupply"
+  ],
+  "license": "All-Rights-Reserved",
+  "icon": "assets/royalkennel/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.contisupply.royalkennel.RoyalKennel"
+    ],
+    "client": [
+      "com.contisupply.royalkennel.client.RoyalKennelClient"
+    ]
+  },
+  "mixins": [
+    "royalkennel.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
