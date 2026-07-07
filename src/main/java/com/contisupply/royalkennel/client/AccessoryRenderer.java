@@ -8,15 +8,15 @@ import com.contisupply.royalkennel.DogStyle;
 import com.contisupply.royalkennel.KennelAttachments;
 import com.contisupply.royalkennel.RoyalKennel;
 
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.animal.wolf.Wolf;
@@ -34,7 +34,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class AccessoryRenderer {
 
-    private static final ResourceLocation ATLAS = RoyalKennel.id("textures/entity/accessories.png");
+    private static final Identifier ATLAS = RoyalKennel.id("textures/entity/accessories.png");
     private static final double MAX_RENDER_DISTANCE_SQ = 64.0 * 64.0;
 
     // 16x16 cells inside the 64x64 atlas.
@@ -66,14 +66,14 @@ public final class AccessoryRenderer {
         if (consumers == null) {
             return;
         }
-        PoseStack poseStack = context.matrixStack();
+        PoseStack poseStack = context.matrices();
         if (poseStack == null) {
             poseStack = new PoseStack();
         }
 
-        Vec3 cameraPos = context.camera().getPosition();
+        Vec3 cameraPos = context.gameRenderer().getMainCamera().getPosition();
         float partial = KennelClock.partialTick();
-        VertexConsumer buffer = consumers.getBuffer(RenderType.entityCutoutNoCull(ATLAS));
+        VertexConsumer buffer = consumers.getBuffer(RenderTypes.entityCutoutNoCull(ATLAS));
 
         for (Entity entity : level.entitiesForRendering()) {
             if (!(entity instanceof Wolf wolf) || wolf.isRemoved() || wolf.isInvisible()) {

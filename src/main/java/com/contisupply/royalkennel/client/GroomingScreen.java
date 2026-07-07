@@ -15,10 +15,13 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.animal.wolf.WolfVariant;
 
@@ -149,7 +152,9 @@ public class GroomingScreen extends Screen {
         var registry = this.minecraft.level.registryAccess().lookupOrThrow(Registries.WOLF_VARIANT);
         variants = registry.listElements().toList();
         variantIndex = 0;
-        var currentKey = wolf.getVariant().unwrapKey().orElse(null);
+        Holder<WolfVariant> currentVariant = wolf.get(DataComponents.WOLF_VARIANT);
+        ResourceKey<WolfVariant> currentKey =
+                currentVariant == null ? null : currentVariant.unwrapKey().orElse(null);
         for (int i = 0; i < variants.size(); i++) {
             if (variants.get(i).key() == currentKey) {
                 variantIndex = i;
@@ -194,7 +199,7 @@ public class GroomingScreen extends Screen {
         if (variants == null || variants.isEmpty()) {
             return "minecraft:pale";
         }
-        return variants.get(variantIndex).key().location().toString();
+        return variants.get(variantIndex).key().identifier().toString();
     }
 
     private void sendUpdate() {
@@ -278,7 +283,7 @@ public class GroomingScreen extends Screen {
         if (variants == null || variants.isEmpty()) {
             return new String[]{"Unknown", "Hound of Mystery"};
         }
-        String path = variants.get(variantIndex).key().location().getPath();
+        String path = variants.get(variantIndex).key().identifier().getPath();
         String[] lore = BREED_LORE.get(path);
         if (lore != null) {
             return lore;
@@ -356,12 +361,12 @@ public class GroomingScreen extends Screen {
         }
 
         @Override
-        public void onPress() {
+        public void onPress(InputWithModifiers input) {
             action.run();
         }
 
         @Override
-        protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        protected void renderContents(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             int x = getX(), y = getY(), w = getWidth(), h = getHeight();
             g.fill(x, y, x + w, y + h, TIMBER_DARK);
             g.fill(x + 1, y + 1, x + w - 1, y + h - 1, isHoveredOrFocused() ? TIMBER_LIGHT : TIMBER);
@@ -384,12 +389,12 @@ public class GroomingScreen extends Screen {
         }
 
         @Override
-        public void onPress() {
+        public void onPress(InputWithModifiers input) {
             action.run();
         }
 
         @Override
-        protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        protected void renderContents(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             int x = getX(), y = getY(), w = getWidth(), h = getHeight();
             g.fill(x, y, x + w, y + h, isHoveredOrFocused() ? GOLD : TIMBER_DARK);
             g.fillGradient(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF6B4A2B, 0xFF4A3018);

@@ -60,8 +60,8 @@ DumpGrep $mc.FullName "net.minecraft.core.Holder" "is|unwrapKey|getRegisteredNam
 DumpGrep $mc.FullName "net.minecraft.client.renderer.MultiBufferSource" "getBuffer"
 DumpGrep $mc.FullName "net.minecraft.world.level.Level" "lient"
 
-$rtClass = ($list | Select-String -Pattern "RenderTypes\.class$" | Select-Object -First 1).Line -replace "/", "." -replace "\.class$", ""
-if ($rtClass) { DumpGrep $mc.FullName $rtClass "ntity" }
+DumpGrep $mc.FullName "net.minecraft.client.renderer.rendertype.RenderTypes" "ntity"
+DumpFull $mc.FullName "net.minecraft.network.protocol.common.custom.CustomPacketPayload"
 
 DumpGrep $mc.FullName "net.minecraft.client.renderer.GameRenderer" "amera"
 

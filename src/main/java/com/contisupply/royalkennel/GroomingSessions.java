@@ -4,14 +4,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.animal.wolf.Wolf;
+import net.minecraft.world.entity.animal.wolf.WolfVariant;
 import net.minecraft.world.item.DyeColor;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -58,12 +61,13 @@ public final class GroomingSessions {
         boolean lookChanged = false;
 
         // Bloodline (wolf variant), sent as a registry id so datapack variants work too.
-        ResourceLocation variantId = ResourceLocation.tryParse(update.variantId());
-        if (variantId != null && !wolf.getVariant().is(variantId)) {
+        Identifier variantId = Identifier.tryParse(update.variantId());
+        Holder<WolfVariant> currentVariant = wolf.get(DataComponents.WOLF_VARIANT);
+        if (variantId != null && (currentVariant == null || !currentVariant.is(variantId))) {
             var registry = player.level().registryAccess().lookupOrThrow(Registries.WOLF_VARIANT);
             var holder = registry.get(ResourceKey.create(Registries.WOLF_VARIANT, variantId));
             if (holder.isPresent()) {
-                wolf.setVariant(holder.get());
+                wolf.setComponent(DataComponents.WOLF_VARIANT, holder.get());
                 lookChanged = true;
             }
         }
@@ -79,7 +83,7 @@ public final class GroomingSessions {
         // Collar hue.
         DyeColor collar = DyeColor.byId(Math.floorMod(update.collar(), 16));
         if (wolf.getCollarColor() != collar) {
-            wolf.setCollarColor(collar);
+            wolf.setComponent(DataComponents.WOLF_COLLAR, collar);
             lookChanged = true;
         }
 

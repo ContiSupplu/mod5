@@ -1,6 +1,6 @@
 package com.contisupply.royalkennel;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.animal.wolf.Wolf;
@@ -19,8 +19,8 @@ public class RoyalKennel implements ModInitializer {
     public static final String MOD_ID = "royalkennel";
     public static final Logger LOGGER = LoggerFactory.getLogger("RoyalKennel");
 
-    public static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
+    public static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(MOD_ID, path);
     }
 
     @Override
@@ -36,7 +36,7 @@ public class RoyalKennel implements ModInitializer {
             if (!canGroom(player, entity)) {
                 return InteractionResult.PASS;
             }
-            if (!level.isClientSide && player instanceof ServerPlayer serverPlayer && entity instanceof Wolf wolf) {
+            if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer && entity instanceof Wolf wolf) {
                 GroomingSessions.open(serverPlayer, wolf);
             }
             return InteractionResult.SUCCESS;

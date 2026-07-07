@@ -17,7 +17,8 @@ public final class KennelNet {
                 OpenGroomingPayload::new
         );
 
-        @Override
+        // No @Override: 1.21.11's CustomPacketPayload no longer declares type();
+        // the codec/type pairing comes from PayloadTypeRegistry registration below.
         public Type<? extends CustomPacketPayload> type() {
             return TYPE;
         }
@@ -41,7 +42,8 @@ public final class KennelNet {
                 UpdateDogPayload::new
         );
 
-        @Override
+        // No @Override: 1.21.11's CustomPacketPayload no longer declares type();
+        // the codec/type pairing comes from PayloadTypeRegistry registration below.
         public Type<? extends CustomPacketPayload> type() {
             return TYPE;
         }
@@ -55,7 +57,8 @@ public final class KennelNet {
                 CloseGroomingPayload::new
         );
 
-        @Override
+        // No @Override: 1.21.11's CustomPacketPayload no longer declares type();
+        // the codec/type pairing comes from PayloadTypeRegistry registration below.
         public Type<? extends CustomPacketPayload> type() {
             return TYPE;
         }
