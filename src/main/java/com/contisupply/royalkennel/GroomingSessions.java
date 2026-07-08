@@ -22,13 +22,14 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 /**
  * Server-side bookkeeping for players currently grooming a dog.
  *
- * While a session is open the dog is ordered to sit so it cannot wander away
- * from the camera; its previous sitting preference is restored when the
- * session ends.
+ * While a session is open the dog stands (posed for the camera - sitting
+ * dogs sprawl unpredictably in 1.21.11) and its pathfinding is stopped every
+ * tick so it cannot wander away. Its previous sitting preference is restored
+ * when the session ends.
  */
 public final class GroomingSessions {
 
-    private record Session(int wolfId, boolean wasSitting) {
+    private record Session(ServerPlayer player, int wolfId, boolean wasSitting) {
     }
 
     private static final Map<UUID, Session> ACTIVE = new HashMap<>();
@@ -42,10 +43,20 @@ public final class GroomingSessions {
         // Re-opening while a session is somehow live: tidy up the old one first.
         close(player, false);
 
-        ACTIVE.put(player.getUUID(), new Session(wolf.getId(), wolf.isOrderedToSit()));
-        wolf.setOrderedToSit(true);
+        ACTIVE.put(player.getUUID(), new Session(player, wolf.getId(), wolf.isOrderedToSit()));
+        wolf.setOrderedToSit(false); // stand for the fitting
         wolf.getNavigation().stop();
         ServerPlayNetworking.send(player, new KennelNet.OpenGroomingPayload(wolf.getId()));
+    }
+
+    /** Called every server tick: keep groomed dogs posed in place. */
+    public static void tick() {
+        for (Session session : ACTIVE.values()) {
+            Wolf wolf = resolveWolf(session.player(), session);
+            if (wolf != null) {
+                wolf.getNavigation().stop();
+            }
+        }
     }
 
     public static void applyUpdate(ServerPlayer player, KennelNet.UpdateDogPayload update) {
@@ -72,8 +83,8 @@ public final class GroomingSessions {
             }
         }
 
-        // Headwear + back gear.
-        DogStyle newStyle = DogStyle.clamped(update.hat(), update.back());
+        // Headwear (back gear was retired: hats only, but they must look good).
+        DogStyle newStyle = DogStyle.clamped(update.hat(), 0);
         DogStyle oldStyle = wolf.getAttached(KennelAttachments.DOG_STYLE);
         if (!newStyle.equals(oldStyle == null ? DogStyle.PLAIN : oldStyle)) {
             wolf.setAttached(KennelAttachments.DOG_STYLE, newStyle);

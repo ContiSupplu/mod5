@@ -7,6 +7,7 @@ import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.player.Player;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -50,6 +51,8 @@ public class RoyalKennel implements ModInitializer {
 
         ServerPlayConnectionEvents.DISCONNECT.register(
                 (handler, server) -> GroomingSessions.onDisconnect(handler.player));
+
+        ServerTickEvents.END_SERVER_TICK.register(server -> GroomingSessions.tick());
 
         LOGGER.info("The Royal Kennel is open. Bring thy hound.");
     }

@@ -28,10 +28,10 @@ public final class ClientGroomingSession {
     /** Degrees per second of the slow orbit. */
     private static final double ORBIT_SPEED_DEG = 9.0;
     /**
-     * Extra yaw so the dog sits right-of-center, clear of the left panel.
-     * If your dog drifts the wrong way, flip the sign.
+     * Extra upward camera tilt so the dog sits in the lower half of the
+     * frame, clear of the top banner. More negative = dog lower on screen.
      */
-    private static final float FRAME_YAW_OFFSET = -11.0f;
+    private static final float FRAME_PITCH_OFFSET = -7.0f;
     /** Seconds for the glide from the player's view to the orbit. */
     private static final double GLIDE_SECONDS = 0.9;
     // -----------------------------------------------------------------------
@@ -167,8 +167,8 @@ public final class ClientGroomingSession {
         double lookY = (dogY + LOOK_AT_HEIGHT) - camY;
         double lookZ = dogZ - camZ;
         double horizontal = Math.sqrt(lookX * lookX + lookZ * lookZ);
-        float targetYaw = (float) Math.toDegrees(Math.atan2(-lookX, lookZ)) + FRAME_YAW_OFFSET;
-        float targetPitch = (float) Math.toDegrees(-Math.atan2(lookY, horizontal));
+        float targetYaw = (float) Math.toDegrees(Math.atan2(-lookX, lookZ));
+        float targetPitch = (float) Math.toDegrees(-Math.atan2(lookY, horizontal)) + FRAME_PITCH_OFFSET;
 
         // Ease-in glide from wherever the player was looking.
         float k = (float) Mth.clamp(t / GLIDE_SECONDS, 0.0, 1.0);

@@ -23,14 +23,17 @@ import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Renders hats and back gear on every dog that has a {@link DogStyle}.
+ * Renders hats on every dog that has a {@link DogStyle}.
  *
  * Everything here is deliberately low-tech: we anchor to the wolf's real
- * position/eye height/head yaw and emit textured cubes straight into the
- * world's entity buffers. No models, no layers, no render states - which
- * keeps it working across Minecraft's frequent renderer refactors, at the
- * cost of accessories not following the tiniest idle head animations.
- * Every offset below is hand-tuned and safe to tweak.
+ * position and head yaw and emit textured cubes straight into the world's
+ * entity buffers. No models, no layers, no render states - which keeps it
+ * working across Minecraft's frequent renderer refactors.
+ *
+ * The anchor matches the vanilla wolf model's head pivot (~0.44 blocks in
+ * front of the entity center, ~0.66 up). Sitting dogs keep their head at
+ * roughly the same spot, so one anchor set covers both poses; only the rare
+ * "sprawled flat" idle drifts.
  */
 public final class AccessoryRenderer {
 
@@ -38,27 +41,18 @@ public final class AccessoryRenderer {
     private static final double MAX_RENDER_DISTANCE_SQ = 64.0 * 64.0;
 
     // ---- Hand-tuned anchors (blocks, in the wolf's local frame) -----------
-    // "Sitting" wolves in 1.21.11 sprawl flat on the ground, so those anchors
-    // are much lower and further forward than the standing ones.
-    private static final float HAT_UP_STANDING = 0.66f;
-    private static final float HAT_FWD_STANDING = 0.30f;
-    private static final float HAT_UP_SITTING = 0.24f;
-    private static final float HAT_FWD_SITTING = 0.40f;
-    private static final float HAT_LIFT = 0.12f;        // hat base above the skull pivot
-    private static final float BACK_UP_STANDING = 0.46f;
-    private static final float BACK_FWD_STANDING = -0.04f;
-    private static final float BACK_UP_SITTING = 0.17f;
-    private static final float BACK_FWD_SITTING = 0.02f;
+    /** Head pivot: forward of the entity center, above the ground. */
+    private static final float HEAD_PIVOT_UP = 0.655f;
+    private static final float HEAD_PIVOT_FWD = 0.44f;
+    /** From the pivot up to the top of the skull, where hat bases sit. */
+    private static final float SKULL_TOP = 0.20f;
 
     // 16x16 cells inside the 64x64 atlas.
     private static final int GOLD = cell(0, 0);
     private static final int IRON = cell(1, 0);
     private static final int PURPLE = cell(2, 0);
     private static final int RED_CLOTH = cell(3, 0);
-    private static final int LEATHER = cell(0, 1);
     private static final int STRAP = cell(1, 1);
-    private static final int BARREL = cell(2, 1);
-    private static final int BEDROLL = cell(3, 1);
     private static final int GOLD_BRIGHT = cell(0, 2);
     private static final int RUBY = cell(1, 2);
 
@@ -93,121 +87,75 @@ public final class AccessoryRenderer {
                 continue;
             }
             DogStyle style = wolf.getAttached(KennelAttachments.DOG_STYLE);
-            if (style == null || style.isPlain()) {
+            if (style == null || style.hat() == 0) {
                 continue;
             }
             if (wolf.distanceToSqr(cameraPos.x, cameraPos.y, cameraPos.z) > MAX_RENDER_DISTANCE_SQ) {
                 continue;
             }
-            renderWolf(poseStack, buffer, wolf, style, cameraPos, partial);
+            renderHat(poseStack, buffer, wolf, style.hat(), cameraPos, partial);
         }
     }
 
-    private static void renderWolf(PoseStack ps, VertexConsumer vc, Wolf wolf, DogStyle style,
-                                   Vec3 cam, float partial) {
+    private static void renderHat(PoseStack ps, VertexConsumer vc, Wolf wolf, int hat,
+                                  Vec3 cam, float partial) {
         double x = Mth.lerp(partial, wolf.xo, wolf.getX()) - cam.x;
         double y = Mth.lerp(partial, wolf.yo, wolf.getY()) - cam.y;
         double z = Mth.lerp(partial, wolf.zo, wolf.getZ()) - cam.z;
-        float bodyYaw = Mth.rotLerp(partial, wolf.yBodyRotO, wolf.yBodyRot);
         float headYaw = Mth.rotLerp(partial, wolf.yHeadRotO, wolf.yHeadRot);
         float headPitch = Mth.lerp(partial, wolf.xRotO, wolf.getXRot());
-        boolean sitting = wolf.isInSittingPose();
         float scale = wolf.isBaby() ? 0.55f : 1.0f;
 
-        if (style.hat() != 0) {
-            ps.pushPose();
-            ps.translate(x, y, z);
-            ps.mulPose(Axis.YP.rotationDegrees(-headYaw));
-            ps.scale(scale, scale, scale);
-            // Move to the head pivot (the head sits well forward of body center),
-            // tilt with the head, then lift the hat base onto the skull.
-            ps.translate(0.0f,
-                    sitting ? HAT_UP_SITTING : HAT_UP_STANDING,
-                    sitting ? HAT_FWD_SITTING : HAT_FWD_STANDING);
-            ps.mulPose(Axis.XP.rotationDegrees(headPitch));
-            ps.translate(0.0f, HAT_LIFT, 0.0f);
-            switch (style.hat()) {
-                case 1 -> crown(ps, vc);
-                case 2 -> mageCap(ps, vc);
-                case 3 -> knightHelm(ps, vc);
-                default -> {
-                }
+        ps.pushPose();
+        ps.translate(x, y, z);
+        ps.mulPose(Axis.YP.rotationDegrees(-headYaw));
+        ps.scale(scale, scale, scale);
+        ps.translate(0.0f, HEAD_PIVOT_UP, HEAD_PIVOT_FWD); // move to the head pivot
+        ps.mulPose(Axis.XP.rotationDegrees(headPitch));    // tilt with the head
+        ps.translate(0.0f, SKULL_TOP, 0.0f);               // hat base on top of the skull
+        switch (hat) {
+            case 1 -> crown(ps, vc);
+            case 2 -> mageCap(ps, vc);
+            case 3 -> knightHelm(ps, vc);
+            default -> {
             }
-            ps.popPose();
         }
-
-        if (style.back() != 0) {
-            ps.pushPose();
-            ps.translate(x, y, z);
-            ps.mulPose(Axis.YP.rotationDegrees(-bodyYaw));
-            ps.scale(scale, scale, scale);
-            // The back stays level both standing and sprawled, just at
-            // different heights.
-            ps.translate(0.0f,
-                    sitting ? BACK_UP_SITTING : BACK_UP_STANDING,
-                    sitting ? BACK_FWD_SITTING : BACK_FWD_STANDING);
-            switch (style.back()) {
-                case 1 -> backpack(ps, vc);
-                case 2 -> keg(ps, vc);
-                case 3 -> cape(ps, vc);
-                default -> {
-                }
-            }
-            ps.popPose();
-        }
+        ps.popPose();
     }
 
-    // ---- The wardrobe ------------------------------------------------------
+    // ---- The royal hat rack ------------------------------------------------
+    // Local origin: center of the top of the skull; +Z toward the nose.
 
     private static void crown(PoseStack ps, VertexConsumer vc) {
-        box(ps, vc, 0.0f, 0.035f, 0.095f, 0.21f, 0.07f, 0.022f, GOLD);
-        box(ps, vc, 0.0f, 0.035f, -0.095f, 0.21f, 0.07f, 0.022f, GOLD);
-        box(ps, vc, 0.095f, 0.035f, 0.0f, 0.022f, 0.07f, 0.21f, GOLD);
-        box(ps, vc, -0.095f, 0.035f, 0.0f, 0.022f, 0.07f, 0.21f, GOLD);
-        box(ps, vc, 0.085f, 0.085f, 0.085f, 0.036f, 0.036f, 0.036f, GOLD_BRIGHT);
-        box(ps, vc, -0.085f, 0.085f, 0.085f, 0.036f, 0.036f, 0.036f, GOLD_BRIGHT);
-        box(ps, vc, 0.085f, 0.085f, -0.085f, 0.036f, 0.036f, 0.036f, GOLD_BRIGHT);
-        box(ps, vc, -0.085f, 0.085f, -0.085f, 0.036f, 0.036f, 0.036f, GOLD_BRIGHT);
-        box(ps, vc, 0.0f, 0.04f, 0.11f, 0.032f, 0.032f, 0.014f, RUBY);
+        // Band wrapping the brow.
+        box(ps, vc, 0.0f, 0.038f, 0.145f, 0.30f, 0.075f, 0.026f, GOLD);
+        box(ps, vc, 0.0f, 0.038f, -0.145f, 0.30f, 0.075f, 0.026f, GOLD);
+        box(ps, vc, 0.145f, 0.038f, 0.0f, 0.026f, 0.075f, 0.30f, GOLD);
+        box(ps, vc, -0.145f, 0.038f, 0.0f, 0.026f, 0.075f, 0.30f, GOLD);
+        // Points on the corners.
+        box(ps, vc, 0.125f, 0.098f, 0.125f, 0.042f, 0.05f, 0.042f, GOLD_BRIGHT);
+        box(ps, vc, -0.125f, 0.098f, 0.125f, 0.042f, 0.05f, 0.042f, GOLD_BRIGHT);
+        box(ps, vc, 0.125f, 0.098f, -0.125f, 0.042f, 0.05f, 0.042f, GOLD_BRIGHT);
+        box(ps, vc, -0.125f, 0.098f, -0.125f, 0.042f, 0.05f, 0.042f, GOLD_BRIGHT);
+        // The royal ruby, front and center.
+        box(ps, vc, 0.0f, 0.045f, 0.162f, 0.042f, 0.042f, 0.016f, RUBY);
     }
 
     private static void mageCap(PoseStack ps, VertexConsumer vc) {
-        box(ps, vc, 0.0f, 0.008f, 0.0f, 0.30f, 0.018f, 0.30f, PURPLE);
-        box(ps, vc, 0.0f, 0.03f, 0.0f, 0.20f, 0.024f, 0.20f, GOLD);
-        box(ps, vc, 0.0f, 0.06f, 0.0f, 0.19f, 0.08f, 0.19f, PURPLE);
-        box(ps, vc, 0.0f, 0.13f, -0.012f, 0.125f, 0.07f, 0.125f, PURPLE);
-        box(ps, vc, 0.0f, 0.193f, -0.026f, 0.078f, 0.065f, 0.078f, PURPLE);
-        box(ps, vc, 0.0f, 0.248f, -0.042f, 0.04f, 0.05f, 0.04f, PURPLE);
+        box(ps, vc, 0.0f, 0.010f, 0.0f, 0.37f, 0.022f, 0.37f, PURPLE);     // brim
+        box(ps, vc, 0.0f, 0.038f, 0.0f, 0.26f, 0.028f, 0.26f, GOLD);       // hat band
+        box(ps, vc, 0.0f, 0.078f, 0.0f, 0.25f, 0.09f, 0.25f, PURPLE);      // cone...
+        box(ps, vc, 0.0f, 0.158f, -0.015f, 0.17f, 0.08f, 0.17f, PURPLE);
+        box(ps, vc, 0.0f, 0.228f, -0.032f, 0.105f, 0.07f, 0.105f, PURPLE);
+        box(ps, vc, 0.0f, 0.288f, -0.05f, 0.055f, 0.055f, 0.055f, PURPLE); // ...to the tip
     }
 
     private static void knightHelm(PoseStack ps, VertexConsumer vc) {
-        box(ps, vc, 0.0f, -0.05f, 0.01f, 0.235f, 0.20f, 0.24f, IRON);
-        box(ps, vc, 0.0f, -0.035f, 0.132f, 0.16f, 0.022f, 0.012f, STRAP);
-        box(ps, vc, 0.0f, 0.062f, 0.0f, 0.03f, 0.05f, 0.20f, GOLD);
-        box(ps, vc, 0.0f, 0.115f, -0.06f, 0.035f, 0.10f, 0.035f, RED_CLOTH);
-        box(ps, vc, 0.0f, 0.148f, -0.125f, 0.028f, 0.05f, 0.10f, RED_CLOTH);
-    }
-
-    private static void backpack(PoseStack ps, VertexConsumer vc) {
-        box(ps, vc, 0.0f, 0.09f, -0.02f, 0.24f, 0.18f, 0.13f, LEATHER);
-        box(ps, vc, 0.0f, 0.185f, -0.02f, 0.25f, 0.04f, 0.14f, STRAP);
-        box(ps, vc, 0.0f, 0.235f, -0.02f, 0.28f, 0.09f, 0.10f, BEDROLL);
-        box(ps, vc, 0.127f, 0.05f, -0.02f, 0.016f, 0.16f, 0.05f, STRAP);
-        box(ps, vc, -0.127f, 0.05f, -0.02f, 0.016f, 0.16f, 0.05f, STRAP);
-    }
-
-    private static void keg(PoseStack ps, VertexConsumer vc) {
-        // The little rescue barrel rides at the chest, St. Bernard style.
-        box(ps, vc, 0.0f, -0.06f, 0.30f, 0.15f, 0.13f, 0.13f, BARREL);
-        box(ps, vc, 0.0f, 0.02f, 0.30f, 0.02f, 0.05f, 0.10f, STRAP);
-    }
-
-    private static void cape(PoseStack ps, VertexConsumer vc) {
-        ps.pushPose();
-        ps.mulPose(Axis.XP.rotationDegrees(-8.0f)); // drape toward the tail
-        box(ps, vc, 0.0f, 0.10f, -0.12f, 0.26f, 0.02f, 0.32f, RED_CLOTH);
-        box(ps, vc, 0.0f, 0.10f, -0.29f, 0.27f, 0.026f, 0.05f, GOLD_BRIGHT);
-        ps.popPose();
+        box(ps, vc, 0.0f, -0.175f, 0.02f, 0.41f, 0.40f, 0.30f, IRON);      // shell around the head
+        box(ps, vc, 0.0f, -0.10f, 0.176f, 0.26f, 0.032f, 0.014f, STRAP);   // visor slit
+        box(ps, vc, 0.0f, 0.042f, 0.0f, 0.04f, 0.055f, 0.27f, GOLD);       // crest ridge
+        box(ps, vc, 0.0f, 0.10f, -0.10f, 0.042f, 0.115f, 0.042f, RED_CLOTH); // plume
+        box(ps, vc, 0.0f, 0.13f, -0.185f, 0.034f, 0.06f, 0.115f, RED_CLOTH); // plume tail
     }
 
     // ---- Cube plumbing -----------------------------------------------------
